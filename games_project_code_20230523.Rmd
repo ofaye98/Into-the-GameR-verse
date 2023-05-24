@@ -1,0 +1,246 @@
+---
+title: "Code used to data wrangle and create visualizations on a popular games data set"
+author: "Faye, Genevieve, Matt"
+date: '2023-05-18'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Into the GameR-verse
+
+Welcome! In this notebook our team dives into the GameR-verse by using R code to analyze a data set on the most popular video games from 1980 to 2023.
+
+This publicly available data set can be accessed from the Kaggle website using the link below: https://www.kaggle.com/datasets/arnabchaki/popular-video-games-1980-2023
+
+## Setting Up the Data
+
+Use getwd() to make sure you're in the same directory as games.csv. If not, use getwd("/...") to get into the same directory.
+
+Installing and loading in stringr and dplyr for cleaning data.
+
+```{r}
+# Uncomment the install commands below if these libraries have never been installed yet. If they are already installed, you must keep these commented otherwise you'll run into errors
+#install.packages("dplyr") 
+#install.packages("stringr")
+
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(data.table) 
+```
+
+## Reading in the data
+
+Use the read.csv() function to read in the csv as a dataframe. Make sure games.csv is within the same folder as this RMD file. If it's not, you will need to specify a specific path to the csv file.
+
+```{r}
+games_df <- read.csv("games.csv")
+```
+
+## Cleaning up the data
+
+Changing all values that have a "K" into numbers by using stringr's str_replace() function. str_replace() takes the column, the string values that need to be replaced, and what to replace that string value with.\
+\
+In this line, we're targeting all the "K"s in the Times Listed column, since we want 3900 as a numeric value and not "3.9K". The "\$" is used to mark the end of the string and doesn't confuse R. Afterwards, as.numeric() is used to change the "3.9" into 3.9 (a number and not a string) and multiplied by 1000.
+
+```{r}
+games_df$Times.Listed <- as.numeric(str_replace(games_df$Times.Listed, "K$", "")) * 1000
+```
+
+Doing the above for columns with "K" values (Number of Reviews, Plays, Playing, Backlogs, and Wishlist)
+
+```{r}
+games_df$Number.of.Reviews <- as.numeric(str_replace(games_df$Number.of.Reviews, "K$", "")) * 1000
+games_df$Plays <- as.numeric(str_replace(games_df$Plays, "K$", "")) * 1000
+games_df$Playing <- as.numeric(str_replace(games_df$Playing, "K$", "")) * 1000
+games_df$Backlogs <- as.numeric(str_replace(games_df$Backlogs, "K$", "")) * 1000
+games_df$Wishlist <- as.numeric(str_replace(games_df$Wishlist, "K$", "")) * 1000
+```
+
+Make sure ***not to run these chunks twice*** -- otherwise you'll multiply the values by 1000000. If that happens type rm(games_df) into the console and rerun the chunks.
+
+## Creating new "Month" and "Year" columns
+
+Installing and loading in lubridate for formatting.
+
+```{r}
+#install.packages("lubridate")
+library(lubridate)
+```
+
+Converting Date column into a date format. Originally, the dates were in this format: "Feb 25, 2022". After using mdy() to change into 2022-02-25 so that we can use month() and year().
+
+-   Warning: 3 failed to parse -- we will ignore these 3 for now
+
+```{r}
+games_df$Release.Date <- mdy(games_df$Release.Date)
+```
+
+Using month() to create a month column and year() to create a year column.
+
+```{r}
+games_df$Release.Month <- month(games_df$Release.Date, label = TRUE) 
+#label = TRUE is used to get month name rather than the number (February vs 02) -- we can get 02 if we delete label
+
+games_df$Release.Year <- year(games_df$Release.Date)
+```
+
+## Plots
+
+Installing and loading in ggplot for visualization.
+
+theme(axis.text.x = element_text(angle = 45, hjust = 1),
+
+panel.grid = element_blank())
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+```
+
+Right now, the Genres column is formatted in vectors, which hold multiple genres in one row. We need to separate each genre into its own separate row to make it easier for ggplot2 to plot each genre.
+
+```{r}
+# convert genre column into string
+games_genres <- games_df # make a copy of the original df
+games_genres$Genres <- as.character(games_genres$Genres) 
+games_genres[games_genres==""]<-NA # replace blank cells with N/A
+
+# for loop that separates each genre into its own row
+for (row in 1:nrow(games_genres)) { # do this for all rows in the df
+  new_str <- gsub("\\[|\\]", "", games_genres$Genres[row]) # remove the brackets 
+  new_str <- gsub("\\'|\\'", "", new_str) # remove the "" 
+  new_str <- gsub(" ", "", new_str) # remove any extra spaces
+  games_genres$Genres[row] <- new_str # the cleaned up string will be replaced 
+  # old genre format = "['Genre1', 'Genre2']" --> new genre format = "Genre1, Genre2"
+}
+
+# split into multiple rows using the "," 
+games_genres = separate_rows(games_genres,"Genres",sep = ",")
+games_genres <- games_genres %>% drop_na(Rating)
+```
+
+Plotting Most Popular Genres by Year
+
+```{r}
+# make a df which we'll use to plot genre vs years
+genre_year_df <- games_genres %>% 
+  group_by(Genres, Release.Year)
+
+genre_year_counts <- genre_year_df %>% 
+  summarize(Count = n())
+
+most_popular_by_year <- genre_year_counts %>% 
+  group_by(Genres) %>% 
+  top_n(1, Count) %>% 
+  ungroup()
+
+# remove the top three rows which were blank 
+most_popular_by_year <- most_popular_by_year[-c(1,2,3),] 
+```
+
+```{r}
+ggplot(most_popular_by_year, aes(x = Release.Year, y = Count, fill = Genres)) +
+  geom_col() +
+  labs(title = "Most Popular Genres by Year", x = "Year", y = "") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Plotting Average Rating per Genre
+
+```{r}
+# make a df which is grouped by Genre and has the average rating per genre
+genres_rating_avgs <- games_genres %>%
+  group_by(Genres) %>%
+  summarise_at(vars(Rating), list(avg_rating = mean)) 
+
+# remove the top row which was blank
+genres_rating_avgs <- genres_rating_avgs[-c(1),] 
+```
+
+```{r}
+ggplot(data=genres_rating_avgs, aes(x = reorder(Genres, -avg_rating), y=avg_rating)) +
+  geom_bar(stat="identity", width=0.5, fill="plum4") +
+  theme(axis.text.x = element_text(angle = 65, hjust = 1), panel.grid = element_blank()) +
+  labs(title = "Average Rating per Genre",
+  x = "Genre", y = "Average Rating (out of 5)") 
+```
+
+Plotting Average Plays per Genre
+
+```{r}
+# make a df which is grouped by Genre and has the average plays per genre
+genres_plays_avgs <- games_genres %>%
+  group_by(Genres) %>%
+  summarise_at(vars(Plays), list(avg_plays = mean)) %>% 
+  drop_na(avg_plays)
+
+# remove the top row which was blank
+genres_plays_avgs <- genres_plays_avgs[-c(1),]
+
+# try to find the blank row
+games_genres[games_genres$Genres %like% " ", ]
+print(genres_plays_avgs[1,1])
+```
+
+```{r}
+ggplot(data=genres_plays_avgs, aes(x = reorder(Genres, -avg_plays), y=avg_plays)) +
+  geom_bar(stat="identity", width=0.5, fill="plum4") +
+  theme(axis.text.x = element_text(angle = 65, hjust = 1), panel.grid = element_blank()) +
+  labs(title = "Average Plays per Genre",
+  x = "Genre", y = "Average Plays") 
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
+
+## 
+
+```{r}
+```
