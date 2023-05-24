@@ -151,11 +151,19 @@ most_popular_by_year <- most_popular_by_year[-c(1,2,3),]
 ```
 
 ```{r}
+# check to see unique year values
+unique(most_popular_by_year$Release.Year)
+table(most_popular_by_year$Release.Year)
+
 ggplot(most_popular_by_year, aes(x = Release.Year, y = Count, fill = Genres)) +
   geom_col() +
   labs(title = "Most Popular Genres by Year", x = "Year", y = "") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, size = 8), # set x axis to 45 degrees 
+        panel.grid.minor.x = element_blank(), # remove minor grid lines
+        legend.key.size = unit(0.2, 'cm')) + # make legend smaller
+  guides(fill = guide_legend(ncol = 1)) + # make legend one column
+  scale_x_continuous(breaks=seq(2003, 2023, 1))
 ```
 
 Plotting Average Rating per Genre
