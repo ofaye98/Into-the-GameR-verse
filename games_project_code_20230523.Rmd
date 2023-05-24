@@ -15,6 +15,14 @@ Welcome! In this notebook our team dives into the GameR-verse by using R code to
 
 This publicly available data set can be accessed from the Kaggle website using the link below: https://www.kaggle.com/datasets/arnabchaki/popular-video-games-1980-2023
 
+Using this data set we seek to answer our primary question:
+Which games are users inclined to play right now and which ones do they keep hanging in their game shelves?
+
+To do this we tackle these sub-questions:
+1. Which game genres are the most popular? 
+2. What are the trends in popularity for each game genre?
+3. Can we identify any relationship between plot, genre, and popularity?
+
 ## Setting Up the Data
 
 Use getwd() to make sure you're in the same directory as games.csv. If not, use getwd("/...") to get into the same directory.
