@@ -13,5 +13,5 @@ Matt - john.suntay@ucsf.edu
 
 
 
-For a video presentation on our analyses, please follow this [link](https://ucsf.box.com/s/ley36wzdgvhu6a04rnwpyjyh6lxgi9ko)!
+For a video presentation on our analyses, please follow this [link](https://ucsf.box.com/s/ley36wzdgvhu6a04rnwpyjyh6lxgi9ko)! Thank you!
 
